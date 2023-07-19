@@ -29,13 +29,14 @@ SCREEN_SIZE = PADDING*(GRID_SIZE + 1) + SQUARE_SIZE*GRID_SIZE
 size = (SCREEN_SIZE, SCREEN_SIZE)
 SCREEN = pygame.display.set_mode(size)
 
-# the available_spots
+# global variables:
 AVAILABLE_SPOTS = []
 
 NUMBER_OF_APPLES = 10
 
 APPLE_EATEN = ''
 
+IS_HOST = False
 
 def draw_frame():
     for row in GRID:
@@ -43,18 +44,22 @@ def draw_frame():
             draw_square(column.x, column.y, column.color)
     pygame.display.flip()
 
-
 def draw_square(x, y, color):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
-
 
 def update_grid(snakes, my_socket):
     # part 1(the apple): 
     for snake in snakes:
         if GRID[snake.row][snake.col].count == -1:
-            apple_position = add_apple()
-            my_socket.send(f'AA({apple_position[0]},{apple_position[1]})'.encode())
-            my_socket.recv(1024)
+            if IS_HOST:
+                apple_position = add_apple_host()
+                my_socket.send(f'AA({apple_position[0]},{apple_position[1]})'.encode())
+                my_socket.recv(1024)
+            else:
+                apple_position = my_socket.recv(1024).decode()
+                apple_numbers = re.findall(r'\d+', apple_position)
+                apple_numbers = list(map(int, apple_numbers)) 
+                add_apple(apple_numbers[0], apple_numbers[1])
             snake.apple_eaten = True
         GRID[snake.row][snake.col].count = snake.head + 1
         GRID[snake.row][snake.col].id = snake.id
@@ -83,8 +88,7 @@ def update_grid(snakes, my_socket):
     for snake in snakes:
         snake.apple_eaten = False
 
-
-def add_apple():
+def add_apple_host():
     if len(AVAILABLE_SPOTS) > 0:
         new_apple_spot = AVAILABLE_SPOTS[random.randint(0, len(AVAILABLE_SPOTS) - 1)]
         new_apple_spot.count = -1
@@ -92,6 +96,14 @@ def add_apple():
         AVAILABLE_SPOTS.remove(new_apple_spot)
     return new_apple_spot.x, new_apple_spot.y
 
+def add_apple(x, y):
+    new_apple_spot = None
+    for row in GRID:
+        for column in row:
+            if column.x == x and column.y == y:
+                new_apple_spot = column
+    new_apple_spot.count = -1
+    new_apple_spot.color = APPLE_COLOR
 
 def death(snake):
     for row in GRID:
@@ -99,71 +111,66 @@ def death(snake):
             if column.id == snake.id:
                 column.color = BACKGROUND_COLOR
                 column.count = 0
-    # AVAILABLE_SPOTS.clear()
     snake.head = 4
 
+def enter_snake(snakes):
+    for snake in snakes:
+        for i in range(4, 8):
+            GRID[i][snake.col].count = i - 3
+            GRID[i][snake.col].color = snake.color
+            GRID[i][snake.col].id = snake.id
+        GRID[snake.row][snake.col].color = snake.head_color
 
 def main():
     global APPLE_EATEN
     DEAD_SNAKES = [] 
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
-    # my_socket.settimeout(0.01)
     print('connected')
     pygame.init()
     while True:
         # draw the board
         SCREEN.fill(BLACK)
-        snake1 = Snake(20, 7, SNAKE_COLOR, HEAD_COLOR, 1)
+        snake1 = Snake(7, 7, SNAKE_COLOR, HEAD_COLOR, 1)
         snake2 = Snake(7, 20, YELLOW, YELLOW_HEAD, 2)
         snakes = [snake1, snake2] 
         # add snake to grid
-        for i in range(4, 8):
-            GRID[i][20].count = i - 3
-            GRID[i][20].color = snake2.color
-            GRID[i][20].id = 2
-        GRID[7][20].color = snake2.head_color
-        for i in range(4, 8):
-            GRID[20][i].count = i - 3
-            GRID[20][i].color = snake1.color
-            GRID[20][i].id = 1
-        GRID[20][7].color = snake1.head_color
-        snake1.direction = 'down'
+        enter_snake(snakes)
         # add available spots for the apple to the according list
         for row in GRID:
             for column in row:
                 if column.count == 0:
                     AVAILABLE_SPOTS.append(column)
-        apples = ''
-        for i in range(0, NUMBER_OF_APPLES):
-            apple_position = add_apple()
-            apples += f':({apple_position[0]},{apple_position[1]})'  # add apple to the grid
-        my_socket.send(('AA' + apples).encode())
-        my_socket.recv(1024)
+        # add apples:
+        if IS_HOST:
+            apples = ''
+            for i in range(0, NUMBER_OF_APPLES):
+                apple_position = add_apple_host()
+                apples += f':({apple_position[0]},{apple_position[1]})'  # add apple to the grid
+            my_socket.send(('AA' + apples).encode())
+            my_socket.recv(1024)
+        else:
+            apples = my_socket.recv(1024).decode().split(':')
+            if apples[0] == 'AA':
+                for i in range(1, len(apples)):
+                    apple_numbers = re.findall(r'\d+', apples[i])
+                    apple_numbers = list(map(int, apple_numbers)) 
+                    add_apple(apple_numbers[0], apple_numbers[1])
         draw_frame()  # draw the beginning frame
-        
         # wait for the space_bar to be pressed
-        start_game = False
-        wait = ''
-        while not start_game:
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        start_game = True
-                        my_socket.send('BG'.encode()) 
-                if event.type == pygame.QUIT:
-                        pygame.quit()
+        if IS_HOST:
+            start_game = False
+            while not start_game:
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            start_game = True
+                            my_socket.send('BG'.encode()) 
+                    if event.type == pygame.QUIT:
+                            pygame.quit()
         my_socket.recv(1024)
-        # my_socket.settimeout(0.01)
-        # start the game
         quit_game = False
         while not quit_game:
-            # data = snake2.direction
-            # try:
-            #     data = my_socket.recv(1024).decode()
-            # except:
-            #     pass
-            # snake2.direction = data
             draw_frame()
             snake1.update_position()
             my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
@@ -171,10 +178,13 @@ def main():
             # id=1(2,5)
             for head_info in head_infos:
                 numbers = re.findall(r'\d+', head_info)
-                numbers = list(map(int, numbers)) 
-                for snake in snakes:
-                    if snake.id == numbers[0]:
-                        snake.set_position(numbers[1], numbers[2])
+                numbers = list(map(int, numbers))
+                if not IS_HOST and head_info[:2] == 'AA':
+                    add_apple(numbers[0], numbers[1])
+                else:
+                    for snake in snakes:
+                        if snake.id == numbers[0]:
+                            snake.set_position(numbers[1], numbers[2])
             for snake in snakes:
                 if not 0 <= snake.row < GRID_SIZE or not 0 <= snake.col < GRID_SIZE or GRID[snake.row][snake.col].count > 1:
                     DEAD_SNAKES.append(snake)
@@ -202,14 +212,6 @@ def main():
                         snake1.direction = 'up'
                     if event.key == pygame.K_DOWN and snake1.true_direction != 'up':
                         snake1.direction = 'down'
-                    # if event.key == pygame.K_a and snake2.true_direction != 'right':
-                    #     snake2.direction = 'left' 
-                    # if event.key == pygame.K_d and snake2.true_direction != 'left':
-                    #     snake2.direction = 'right'
-                    # if event.key == pygame.K_w and snake2.true_direction != 'down':
-                    #     snake2.direction = 'up'
-                    # if event.key == pygame.K_s and snake2.true_direction != 'up':
-                    #     snake2.direction = 'down'
                 if event.type == pygame.QUIT:
                     pygame.quit()
 
