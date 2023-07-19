@@ -32,7 +32,9 @@ SCREEN = pygame.display.set_mode(size)
 # the available_spots
 AVAILABLE_SPOTS = []
 
-NUMBER_OF_APPLES = 1
+NUMBER_OF_APPLES = 10
+
+APPLE_EATEN = ''
 
 
 def draw_frame():
@@ -46,11 +48,13 @@ def draw_square(x, y, color):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
 
 
-def update_grid(snakes):
+def update_grid(snakes, my_socket):
     # part 1(the apple): 
     for snake in snakes:
         if GRID[snake.row][snake.col].count == -1:
-            add_apple()
+            apple_position = add_apple()
+            my_socket.send(f'AA({apple_position[0]},{apple_position[1]})'.encode())
+            my_socket.recv(1024)
             snake.apple_eaten = True
         GRID[snake.row][snake.col].count = snake.head + 1
         GRID[snake.row][snake.col].id = snake.id
@@ -86,6 +90,7 @@ def add_apple():
         new_apple_spot.count = -1
         new_apple_spot.color = APPLE_COLOR
         AVAILABLE_SPOTS.remove(new_apple_spot)
+    return new_apple_spot.x, new_apple_spot.y
 
 
 def death(snake):
@@ -99,6 +104,7 @@ def death(snake):
 
 
 def main():
+    global APPLE_EATEN
     DEAD_SNAKES = [] 
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
@@ -128,8 +134,12 @@ def main():
             for column in row:
                 if column.count == 0:
                     AVAILABLE_SPOTS.append(column)
-        # for i in range(0, NUMBER_OF_APPLES):
-        #     add_apple()  # add apple to the grid
+        apples = ''
+        for i in range(0, NUMBER_OF_APPLES):
+            apple_position = add_apple()
+            apples += f':({apple_position[0]},{apple_position[1]})'  # add apple to the grid
+        my_socket.send(('AA' + apples).encode())
+        my_socket.recv(1024)
         draw_frame()  # draw the beginning frame
         
         # wait for the space_bar to be pressed
@@ -179,7 +189,7 @@ def main():
                 death(snake)
                 snakes.remove(snake)
             DEAD_SNAKES.clear()
-            update_grid(snakes)
+            update_grid(snakes, my_socket)
             draw_frame()
             pygame.time.delay(120)
             for event in pygame.event.get():
