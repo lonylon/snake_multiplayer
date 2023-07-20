@@ -21,27 +21,43 @@ GRID_SIZE = 40
 GRID = [[GridSquare(i, j, BACKGROUND_COLOR, 0) for j in range(GRID_SIZE)] for i in range(GRID_SIZE)]
 
 # window:
-SQUARE_SIZE = 11
+SQUARE_SIZE = 11 
 PADDING = 3
 SCREEN_SIZE = PADDING*(GRID_SIZE + 1) + SQUARE_SIZE*GRID_SIZE
+SCORE_FONT_SIZE = 30
 
 # display:
-size = (SCREEN_SIZE, SCREEN_SIZE)
+size = (SCREEN_SIZE + 150, SCREEN_SIZE)
 SCREEN = pygame.display.set_mode(size)
 
 # global variables:
 AVAILABLE_SPOTS = []
 
-NUMBER_OF_APPLES = 10
+NUMBER_OF_APPLES = 20
 
 APPLE_EATEN = ''
 
-IS_HOST = False
+IS_HOST = True
 
-def draw_frame():
+def draw_frame(snakes):
     for row in GRID:
         for column in row:
             draw_square(column.x, column.y, column.color)
+
+    # Clear the area where scores are displayed
+    pygame.draw.rect(SCREEN, BOARD_COLOR, pygame.Rect(SCREEN_SIZE, 0, 150, SCREEN_SIZE))
+
+    # Display scores next to the board
+    score_font = pygame.font.Font(None, SCORE_FONT_SIZE)
+    score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
+    for i in range(len(snakes)):
+        score_text = score_font.render(f"Player {snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
+        score_text_rect = score_text.get_rect(
+            left=score_x_offset,
+            top=i * (SCORE_FONT_SIZE + 5)
+        )
+        SCREEN.blit(score_text, score_text_rect)
+
     pygame.display.flip()
 
 def draw_square(x, y, color):
@@ -111,7 +127,6 @@ def death(snake):
             if column.id == snake.id:
                 column.color = BACKGROUND_COLOR
                 column.count = 0
-    snake.head = 4
 
 def enter_snake(snakes):
     for snake in snakes:
@@ -133,7 +148,8 @@ def main():
         SCREEN.fill(BLACK)
         snake1 = Snake(7, 7, SNAKE_COLOR, HEAD_COLOR, 1)
         snake2 = Snake(7, 20, YELLOW, YELLOW_HEAD, 2)
-        snakes = [snake1, snake2] 
+        snakes = [snake1, snake2]
+        total_snakes = [snake1, snake2]
         # add snake to grid
         enter_snake(snakes)
         # add available spots for the apple to the according list
@@ -156,7 +172,7 @@ def main():
                     apple_numbers = re.findall(r'\d+', apples[i])
                     apple_numbers = list(map(int, apple_numbers)) 
                     add_apple(apple_numbers[0], apple_numbers[1])
-        draw_frame()  # draw the beginning frame
+        draw_frame(total_snakes)  # draw the beginning frame
         # wait for the space_bar to be pressed
         if IS_HOST:
             start_game = False
@@ -171,7 +187,7 @@ def main():
         my_socket.recv(1024)
         quit_game = False
         while not quit_game:
-            draw_frame()
+            draw_frame(total_snakes)
             snake1.update_position()
             my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
             head_infos = my_socket.recv(1024).decode().split(':')
@@ -200,7 +216,7 @@ def main():
                 snakes.remove(snake)
             DEAD_SNAKES.clear()
             update_grid(snakes, my_socket)
-            draw_frame()
+            draw_frame(total_snakes)
             pygame.time.delay(120)
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
