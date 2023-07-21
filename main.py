@@ -51,7 +51,7 @@ def draw_frame(snakes, SCREEN):
     score_font = pygame.font.Font(None, SCORE_FONT_SIZE)
     score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
     for i in range(len(snakes)):
-        score_text = score_font.render(f"Player {snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
+        score_text = score_font.render(f"{snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
         score_text_rect = score_text.get_rect(
             left=score_x_offset,
             top=i * (SCORE_FONT_SIZE + 5)
@@ -100,6 +100,7 @@ def update_grid(snakes, my_socket):
                         column.color = snake.head_color
             if column.count == 0:
                 column.color = BACKGROUND_COLOR
+                column.id = 0
                 continue
     for snake in snakes:
         snake.apple_eaten = False
@@ -142,8 +143,8 @@ def main():
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
     print('connected')
-    tkinter_handler = Tk_Handler()
-    tkinter_handler.main_page()
+    tkinter_handler = Tk_Handler(my_socket)
+    tkinter_handler.start_program()
     SCREEN = pygame.display.set_mode(size)
     pygame.init()
     while True:
@@ -156,6 +157,7 @@ def main():
         # add snake to grid
         enter_snake(snakes)
         # add available spots for the apple to the according list
+        AVAILABLE_SPOTS.clear()
         for row in GRID:
             for column in row:
                 if column.count == 0:
@@ -210,7 +212,7 @@ def main():
                 for check_snake in snakes:
                     if snake is check_snake:
                         continue
-                    if snake.row == check_snake.row  and snake.col == check_snake.col:
+                    if snake.row == check_snake.row and snake.col == check_snake.col:
                         DEAD_SNAKES.append(snake)
                         DEAD_SNAKES.append(check_snake)
             DEAD_SNAKES = list(set(DEAD_SNAKES)) 
@@ -233,6 +235,7 @@ def main():
                         snake1.direction = 'down'
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    my_socket.send(f'goodbye'.encode())
             if len(snakes) == 0:
                 quit_game = True
 
