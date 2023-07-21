@@ -2,6 +2,7 @@ import pygame
 import random
 import socket
 import re
+from tk_handler import Tk_Handler
 from snake import Snake
 from grid_square import GridSquare
 
@@ -28,7 +29,6 @@ SCORE_FONT_SIZE = 30
 
 # display:
 size = (SCREEN_SIZE + 150, SCREEN_SIZE)
-SCREEN = pygame.display.set_mode(size)
 
 # global variables:
 AVAILABLE_SPOTS = []
@@ -39,10 +39,10 @@ APPLE_EATEN = ''
 
 IS_HOST = True
 
-def draw_frame(snakes):
+def draw_frame(snakes, SCREEN):
     for row in GRID:
         for column in row:
-            draw_square(column.x, column.y, column.color)
+            draw_square(column.x, column.y, column.color, SCREEN)
 
     # Clear the area where scores are displayed
     pygame.draw.rect(SCREEN, BOARD_COLOR, pygame.Rect(SCREEN_SIZE, 0, 150, SCREEN_SIZE))
@@ -60,7 +60,7 @@ def draw_frame(snakes):
 
     pygame.display.flip()
 
-def draw_square(x, y, color):
+def draw_square(x, y, color, SCREEN):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
 
 def update_grid(snakes, my_socket):
@@ -142,6 +142,9 @@ def main():
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
     print('connected')
+    tkinter_handler = Tk_Handler()
+    tkinter_handler.main_page()
+    SCREEN = pygame.display.set_mode(size)
     pygame.init()
     while True:
         # draw the board
@@ -172,7 +175,7 @@ def main():
                     apple_numbers = re.findall(r'\d+', apples[i])
                     apple_numbers = list(map(int, apple_numbers)) 
                     add_apple(apple_numbers[0], apple_numbers[1])
-        draw_frame(total_snakes)  # draw the beginning frame
+        draw_frame(total_snakes, SCREEN)  # draw the beginning frame
         # wait for the space_bar to be pressed
         if IS_HOST:
             start_game = False
@@ -187,7 +190,7 @@ def main():
         my_socket.recv(1024)
         quit_game = False
         while not quit_game:
-            draw_frame(total_snakes)
+            draw_frame(total_snakes, SCREEN)
             snake1.update_position()
             my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
             head_infos = my_socket.recv(1024).decode().split(':')
@@ -216,7 +219,7 @@ def main():
                 snakes.remove(snake)
             DEAD_SNAKES.clear()
             update_grid(snakes, my_socket)
-            draw_frame(total_snakes)
+            draw_frame(total_snakes, SCREEN)
             pygame.time.delay(120)
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -230,6 +233,8 @@ def main():
                         snake1.direction = 'down'
                 if event.type == pygame.QUIT:
                     pygame.quit()
+            if len(snakes) == 0:
+                quit_game = True
 
 
 if __name__ == '__main__':
