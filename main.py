@@ -147,13 +147,26 @@ def main():
     tkinter_handler.start_program()
     SCREEN = pygame.display.set_mode(size)
     pygame.init()
+    snake1 = Snake(7, 7, SNAKE_COLOR, HEAD_COLOR, 1)
+    snakes = []
+    total_snakes = []
+    my_socket.send(f'SK{snake1.row},{snake1.col},{snake1.color},{snake1.head_color},{snake1.id}'.encode())
+    snakes_info = my_socket.recv(1024).decode().split(':')
+    for snake_info in snakes_info:
+        snake_numbers = re.findall(r'\d+', snake_info)
+        snake_numbers = list(map(int, snake_numbers))
+        new_snake = Snake(
+            snake_numbers[0], 
+            snake_numbers[1], 
+            (snake_numbers[2], snake_numbers[3], snake_numbers[4]),
+            (snake_numbers[5], snake_numbers[6], snake_numbers[7]),
+            snake_numbers[8])
+        snakes.append(new_snake)
+        total_snakes.append(new_snake)
+
     while True:
         # draw the board
         SCREEN.fill(BLACK)
-        snake1 = Snake(7, 7, SNAKE_COLOR, HEAD_COLOR, 1)
-        snake2 = Snake(7, 20, YELLOW, YELLOW_HEAD, 2)
-        snakes = [snake1, snake2]
-        total_snakes = [snake1, snake2]
         # add snake to grid
         enter_snake(snakes)
         # add available spots for the apple to the according list

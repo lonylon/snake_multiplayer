@@ -24,7 +24,7 @@ class Tk_Handler:
         self.__snake_label = tk.Label(self.__beginning_page, text='Snake', bg='green', font=self.__LABEL_FONT)
         self.__snake_label.pack(pady=10)
 
-        self.__login = tk.Button(self.__beginning_page, text='Login', bg='lightgreen', font=self.__BUTTON_FONT, height=3, width=10)
+        self.__login = tk.Button(self.__beginning_page, text='Login', bg='lightgreen', font=self.__BUTTON_FONT, height=3, width=10, command=self.login)
         self.__login.pack(pady=10)
 
         self.__register = tk.Button(self.__beginning_page, text='Register', bg='lightgreen', font=self.__BUTTON_FONT, height=3, width=10, command=self.register)
@@ -77,12 +77,50 @@ class Tk_Handler:
 
         # Server Resposnes:
         self.__username_taken = tk.Label(self.__register_page, text='username taken', fg='red', bg='gray',width=20)
-        self.__email_invalid.pack_forget()
+        self.__username_taken.pack_forget()
 
         self.__already_signed_in = tk.Label(self.__register_page, text='already signed in', fg='red', bg='gray',width=20)
-        self.__email_invalid.pack_forget()
+        self.__already_signed_in.pack_forget()
 
-        # Start Page:
+        # login page widgets -------------------------------------------------------------------
+        self.__login_page = tk.Frame(self.root, bg='gray')
+
+        self.__login_label = tk.Label(self.__login_page, text='Login', font=self.__LABEL_FONT, bg='blue')
+        self.__login_label.pack(pady=20)
+
+        # Input fields
+        self.__invalid_key_login = tk.Label(self.__login_page, text='an invalid key was entered', fg='red', bg='gray',width=20)
+        self.__invalid_key_login.pack_forget()
+
+        # email
+        self.__email_label_login = tk.Label(self.__login_page, text='Email:', font=self.__BUTTON_FONT, bg='gray')
+        self.__email_label_login.pack(pady=5)
+
+        self.__email_entry_login = tk.Entry(self.__login_page, font=self.__BUTTON_FONT, width=20)
+        self.__email_entry_login.pack(pady=5)
+
+        # password
+        self.__password_label_login = tk.Label(self.__login_page, text='Password:', font=self.__BUTTON_FONT, bg='gray')
+        self.__password_label_login.pack(pady=5)
+
+        self.__password_entry_login = tk.Entry(self.__login_page, font=self.__BUTTON_FONT, width=20, show='*')
+        self.__password_entry_login.pack(pady=5)
+
+        # Buttons
+        self.__button_frame = tk.Frame(self.__login_page, bg='gray')
+        self.__button_frame.pack(pady=10)
+
+        self.__back_button = tk.Button(self.__button_frame, text='Back', bg='lightblue', font=self.__BUTTON_FONT, command=self.main_page)
+        self.__back_button.pack(side=tk.RIGHT, padx=5)
+
+        self.__login_button = tk.Button(self.__button_frame, text='login', bg='lightblue', font=self.__BUTTON_FONT, command=self.login_button_pressed)
+        self.__login_button.pack(padx=5)
+
+        # Server Resposnes:
+        self.__incorrect_login = tk.Label(self.__login_page, text='email or password incorrect', fg='red', bg='gray',width=20)
+        self.__incorrect_login.pack_forget()
+
+        # Start Page ---------------------------------------------------------------------------------:
         self.__start_page = tk.Frame(self.root, bg='gray')
 
         self.__hello_user = tk.Label(self.__start_page, text=f'hello', bg='gray', height=3, width=15, font=self.__TITLE_FONT)
@@ -103,11 +141,20 @@ class Tk_Handler:
 
     def register(self):
         self.__hide_page(self.__beginning_page)
+        self.__hide_page(self.__start_page)
+        self.__hide_page(self.__login_page)
         self.__show_page(self.__register_page)
+
+    def login(self):
+        self.__hide_page(self.__beginning_page)
+        self.__hide_page(self.__start_page)
+        self.__hide_page(self.__register_page)
+        self.__show_page(self.__login_page)
 
     def start_page(self):
         self.__hide_page(self.__beginning_page)
         self.__hide_page(self.__register_page)
+        self.__hide_page(self.__login_page)
         self.__show_page(self.__start_page)
 
     def main_page(self):
@@ -116,7 +163,11 @@ class Tk_Handler:
         self.__username_entry.delete(0, tk.END)
         self.__email_entry.delete(0, tk.END)
         self.__password_entry.delete(0, tk.END)
+        self.__email_entry_login.delete(0, tk.END)
+        self.__password_entry_login.delete(0, tk.END)
         self.__hide_page(self.__register_page)
+        self.__hide_page(self.__start_page)
+        self.__hide_page(self.__login_page)
         self.__show_page(self.__beginning_page)
 
     def register_button_pressed(self):
@@ -156,11 +207,36 @@ class Tk_Handler:
         self.__email_entry.delete(0, tk.END)
         self.__password_entry.delete(0, tk.END)
 
+    def login_button_pressed(self):
+        self.__incorrect_login.pack_forget()
+        self.__invalid_key_login.pack_forget()
+        email = self.__email_entry_login.get()
+        password = self.__password_entry_login.get()
+        for character in self.invalid_characters:
+            if character in email or character in password:
+                self.__invalid_key_login.pack()
+                return
+        # if len(email) > 15:
+        #     return
+        # if len(password) > 15:
+        #     return
+        self.socket.send(f'LI{email}:{password}'.encode())
+        data = self.socket.recv(1024).decode()
+        if data[:2] == 'IL':
+            self.__incorrect_login.pack()
+            return
+        else:
+            self.username = data[2:]
+            self.__hello_user.config(text=f'hello {self.username}')
+            self.start_page()
+        self.__username_entry.delete(0, tk.END)
+        self.__email_entry.delete(0, tk.END)
+        self.__password_entry.delete(0, tk.END)
+
     def start_game(self):
         self.root.destroy()
         self.game_started = True
     
-
     def start_program(self):
         self.root.protocol("WM_DELETE_WINDOW", sys.exit)
         self.root.mainloop()
