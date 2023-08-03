@@ -9,6 +9,7 @@ class Tk_Handler:
         self.__BUTTON_FONT = ('Arial', 20)
         self.__LABEL_FONT = ('Arial', 80)
         self.__TITLE_FONT = ('Arial', 10)
+        self.__SELECT_FONT = ('Arial', 65)
         self.invalid_characters = [';', ':', ',', ' ', '/','\\']
         self.username = ''
         # Create the main window
@@ -126,8 +127,22 @@ class Tk_Handler:
         self.__hello_user = tk.Label(self.__start_page, text=f'hello', bg='gray', height=3, width=15, font=self.__TITLE_FONT)
         self.__hello_user.pack(pady=10)
 
-        self.__start_button = tk.Button(self.__start_page, text='Start', bg='red', height=3, width=15, font=self.__BUTTON_FONT, command=self.start_game)
+        self.__start_button = tk.Button(self.__start_page, text='Start', bg='red', height=3, width=15, font=self.__BUTTON_FONT, command=self.select)
         self.__start_button.pack(pady=10)
+
+        # enter loby code widgets------------------------------------------
+        self.__select = tk.Frame(self.root, bg='gray')
+
+        self.__select_code = tk.Label(self.__select, text='enter/host a loby', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
+        self.__select_code.pack(pady=10)
+        
+        self.__create_loby = tk.Button(self.__select, text='create loby', bg='lightblue', font=self.__BUTTON_FONT)
+        self.__create_loby.pack(pady=10)
+
+        self.__join_loby = tk.Button(self.__select, text='join loby', bg='lightblue', font=self.__BUTTON_FONT)
+        self.__join_loby.pack(pady=10)
+
+        # -----------------------------------------------------------------
 
         # Show the original page by default
         self.__show_page(self.__beginning_page)
@@ -143,18 +158,21 @@ class Tk_Handler:
         self.__hide_page(self.__beginning_page)
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__login_page)
+        self.__hide_page(self.__select)
         self.__show_page(self.__register_page)
 
     def login(self):
         self.__hide_page(self.__beginning_page)
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__register_page)
+        self.__hide_page(self.__select)
         self.__show_page(self.__login_page)
 
     def start_page(self):
         self.__hide_page(self.__beginning_page)
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__login_page)
+        self.__hide_page(self.__select)
         self.__show_page(self.__start_page)
 
     def main_page(self):
@@ -169,6 +187,13 @@ class Tk_Handler:
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__login_page)
         self.__show_page(self.__beginning_page)
+
+    def select(self):
+        self.__hide_page(self.__beginning_page)
+        self.__hide_page(self.__register_page)
+        self.__hide_page(self.__login_page)
+        self.__hide_page(self.__start_page)
+        self.__show_page(self.__select)
 
     def register_button_pressed(self):
         self.__invalid_key.pack_forget()

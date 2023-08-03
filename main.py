@@ -235,7 +235,7 @@ def main():
             DEAD_SNAKES.clear()
             update_grid(snakes, my_socket)
             draw_frame(total_snakes, SCREEN)
-            pygame.time.delay(120)
+            pygame.time.delay(120)            
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
