@@ -261,12 +261,12 @@ class Tk_Handler:
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_request = tk.Button(self.__ask, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT)
+            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT)
             new_request.pack(pady=10)
             self.requests.append(new_request)
 
     def play(self, client):
-        self.socket.send(f'PY{client}'.encode)
+        self.socket.send(f'PY{client}'.encode())
         self.socket.recv(1024)
 
     def refresh(self):
