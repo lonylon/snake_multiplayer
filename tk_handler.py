@@ -5,6 +5,7 @@ class Tk_Handler:
     def __init__(self, socket):
         self.socket = socket
         self.players = []
+        self.requests = []
         self.__WINDOW_WIDTH = 713
         self.__WINDOW_HEIGHT = 563
         self.__BUTTON_FONT = ('Arial', 20)
@@ -137,7 +138,7 @@ class Tk_Handler:
         self.__select_code = tk.Label(self.__select, text='ask/join someone', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
         self.__select_code.pack(pady=10)
         
-        self.__create_loby = tk.Button(self.__select, text='join', bg='lightblue', font=self.__BUTTON_FONT)
+        self.__create_loby = tk.Button(self.__select, text='join', bg='lightblue', font=self.__BUTTON_FONT, command=self.join)
         self.__create_loby.pack(pady=10)
 
         self.__join_loby = tk.Button(self.__select, text='ask', bg='lightblue', font=self.__BUTTON_FONT, command=self.ask)
@@ -153,9 +154,22 @@ class Tk_Handler:
         self.__refresh = tk.Button(self.__ask, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh)
         self.__refresh.pack(pady=10)
 
+        self.__back = tk.Button(self.__ask, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
+        self.__back.pack(pady=10)
+        # # join widgets------------------------------------------
+        self.__join = tk.Frame(self.root, bg='gray')
 
+        self.__join_label = tk.Label(self.__join, text='join a player!', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
+        self.__join_label.pack(pady=10)
+
+        self.__refresh_join = tk.Button(self.__join, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh_join)
+        self.__refresh_join.pack(pady=10)
+
+        self.__back = tk.Button(self.__join, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
+        self.__back.pack(pady=10)
+        # self.__refresh = tk.Button(self.__ask, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh)
+        # self.__refresh.pack(pady=10)
         # -----------------------------------------------------------------
-        
 
         # Show the original page by default
         self.__show_page(self.__beginning_page)
@@ -173,6 +187,7 @@ class Tk_Handler:
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__select)
         self.__hide_page(self.__ask)
+        self.__hide_page(self.__join)
         self.__show_page(self.__register_page)
 
     def login(self):
@@ -181,6 +196,7 @@ class Tk_Handler:
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__select)
         self.__hide_page(self.__ask)
+        self.__hide_page(self.__join)
         self.__show_page(self.__login_page)
 
     def start_page(self):
@@ -189,6 +205,7 @@ class Tk_Handler:
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__select)
         self.__hide_page(self.__ask)
+        self.__hide_page(self.__join)
         self.__show_page(self.__start_page)
 
     def main_page(self):
@@ -203,6 +220,7 @@ class Tk_Handler:
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__ask)
+        self.__hide_page(self.__join)
         self.__show_page(self.__beginning_page)
 
     def select(self):
@@ -211,6 +229,7 @@ class Tk_Handler:
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__ask)
+        self.__hide_page(self.__join)
         self.__show_page(self.__select)
 
     def ask(self):
@@ -219,20 +238,47 @@ class Tk_Handler:
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__select)
+        self.__hide_page(self.__join)
         self.__show_page(self.__ask)
         self.refresh()
 
-    # def collect_players(self):
-    #     for player in self.players:
-            
+    def join(self):
+        self.__hide_page(self.__beginning_page)
+        self.__hide_page(self.__register_page)
+        self.__hide_page(self.__login_page)
+        self.__hide_page(self.__start_page)
+        self.__hide_page(self.__select)
+        self.__hide_page(self.__ask)
+        self.__show_page(self.__join)
+        self.refresh_join()
+    
+    def refresh_join(self):
+        for request in self.requests:
+            request.destroy()
+        self.requests.clear()
+        self.socket.send('RJ'.encode())
+        clients = self.socket.recv(1024).decode().split(':')
+        if clients[0] == 'NC':
+            return
+        for client in clients:
+            new_request = tk.Button(self.__ask, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT)
+            new_request.pack(pady=10)
+            self.requests.append(new_request)
+
+    def play(self, client):
+        self.socket.send(f'PY{client}'.encode)
+        self.socket.recv(1024)
 
     def refresh(self):
+        for player in self.players:
+            player.destroy()
+        self.players.clear()
         self.socket.send('RF'.encode())
         clients = self.socket.recv(1024).decode().split(':')
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_player = tk.Button(self.__ask, text=client, bg='lightblue', font=self.__BUTTON_FONT)
+            new_player = tk.Button(self.__ask, text=client, bg='lightblue', font=self.__BUTTON_FONT, command=lambda: self.play(client))
             new_player.pack(pady=10)
             self.players.append(new_player)
 
