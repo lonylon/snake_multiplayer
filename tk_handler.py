@@ -4,6 +4,7 @@ import sys
 class Tk_Handler:
     def __init__(self, socket):
         self.socket = socket
+        self.players = []
         self.__WINDOW_WIDTH = 713
         self.__WINDOW_HEIGHT = 563
         self.__BUTTON_FONT = ('Arial', 20)
@@ -133,16 +134,28 @@ class Tk_Handler:
         # enter loby code widgets------------------------------------------
         self.__select = tk.Frame(self.root, bg='gray')
 
-        self.__select_code = tk.Label(self.__select, text='enter/host a loby', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
+        self.__select_code = tk.Label(self.__select, text='ask/join someone', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
         self.__select_code.pack(pady=10)
         
-        self.__create_loby = tk.Button(self.__select, text='create loby', bg='lightblue', font=self.__BUTTON_FONT)
+        self.__create_loby = tk.Button(self.__select, text='join', bg='lightblue', font=self.__BUTTON_FONT)
         self.__create_loby.pack(pady=10)
 
-        self.__join_loby = tk.Button(self.__select, text='join loby', bg='lightblue', font=self.__BUTTON_FONT)
+        self.__join_loby = tk.Button(self.__select, text='ask', bg='lightblue', font=self.__BUTTON_FONT, command=self.ask)
         self.__join_loby.pack(pady=10)
 
+
+        # ask widgets------------------------------------------
+        self.__ask = tk.Frame(self.root, bg='gray')
+
+        self.__ask_label = tk.Label(self.__ask, text='ask a player!', bg='blue', height=1, width=15, font=self.__SELECT_FONT)
+        self.__ask_label.pack(pady=10)
+
+        self.__refresh = tk.Button(self.__ask, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh)
+        self.__refresh.pack(pady=10)
+
+
         # -----------------------------------------------------------------
+        
 
         # Show the original page by default
         self.__show_page(self.__beginning_page)
@@ -159,6 +172,7 @@ class Tk_Handler:
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__select)
+        self.__hide_page(self.__ask)
         self.__show_page(self.__register_page)
 
     def login(self):
@@ -166,6 +180,7 @@ class Tk_Handler:
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__select)
+        self.__hide_page(self.__ask)
         self.__show_page(self.__login_page)
 
     def start_page(self):
@@ -173,6 +188,7 @@ class Tk_Handler:
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__select)
+        self.__hide_page(self.__ask)
         self.__show_page(self.__start_page)
 
     def main_page(self):
@@ -186,6 +202,7 @@ class Tk_Handler:
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__start_page)
         self.__hide_page(self.__login_page)
+        self.__hide_page(self.__ask)
         self.__show_page(self.__beginning_page)
 
     def select(self):
@@ -193,7 +210,31 @@ class Tk_Handler:
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__login_page)
         self.__hide_page(self.__start_page)
+        self.__hide_page(self.__ask)
         self.__show_page(self.__select)
+
+    def ask(self):
+        self.__hide_page(self.__beginning_page)
+        self.__hide_page(self.__register_page)
+        self.__hide_page(self.__login_page)
+        self.__hide_page(self.__start_page)
+        self.__hide_page(self.__select)
+        self.__show_page(self.__ask)
+        self.refresh()
+
+    # def collect_players(self):
+    #     for player in self.players:
+            
+
+    def refresh(self):
+        self.socket.send('RF'.encode())
+        clients = self.socket.recv(1024).decode().split(':')
+        if clients[0] == 'NC':
+            return
+        for client in clients:
+            new_player = tk.Button(self.__ask, text=client, bg='lightblue', font=self.__BUTTON_FONT)
+            new_player.pack(pady=10)
+            self.players.append(new_player)
 
     def register_button_pressed(self):
         self.__invalid_key.pack_forget()
