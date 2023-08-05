@@ -1,9 +1,16 @@
 import tkinter as tk
 import sys
+import threading
+from threading import Event
+import socket
+import time
 
 class Tk_Handler:
     def __init__(self, socket):
         self.socket = socket
+        self.keep_waiting = True
+        self.thread_event = Event()
+        self.thread = None
         self.players = []
         self.requests = []
         self.__WINDOW_WIDTH = 713
@@ -154,8 +161,12 @@ class Tk_Handler:
         self.__refresh = tk.Button(self.__ask, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh)
         self.__refresh.pack(pady=10)
 
-        self.__back = tk.Button(self.__ask, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
-        self.__back.pack(pady=10)
+        self.__back_ask = tk.Button(self.__ask, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
+        self.__back_ask.pack(pady=10)
+
+        self.__wating = tk.Label(self.__ask, text='', bg='green', font=self.__BUTTON_FONT)
+        self.__wating.pack_forget()
+        
         # # join widgets------------------------------------------
         self.__join = tk.Frame(self.root, bg='gray')
 
@@ -165,8 +176,9 @@ class Tk_Handler:
         self.__refresh_join = tk.Button(self.__join, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh_join)
         self.__refresh_join.pack(pady=10)
 
-        self.__back = tk.Button(self.__join, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
-        self.__back.pack(pady=10)
+        self.__back_join = tk.Button(self.__join, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
+        self.__back_join.pack(pady=10)
+
         # self.__refresh = tk.Button(self.__ask, text='refresh', bg='lightblue', font=self.__BUTTON_FONT, command=self.refresh)
         # self.__refresh.pack(pady=10)
         # -----------------------------------------------------------------
@@ -252,6 +264,11 @@ class Tk_Handler:
         self.__show_page(self.__join)
         self.refresh_join()
     
+    def request(self, client):
+        self.socket.send(f'RQ{client}'.encode())
+        self.socket.recv(1024)
+        self.start_game()
+
     def refresh_join(self):
         for request in self.requests:
             request.destroy()
@@ -261,13 +278,23 @@ class Tk_Handler:
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT)
+            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT, command=lambda: self.request(client))
             new_request.pack(pady=10)
             self.requests.append(new_request)
 
-    def play(self, client):
-        self.socket.send(f'PY{client}'.encode())
+    def wait_for_info(self):
         self.socket.recv(1024)
+        self.start_game()
+
+    def play(self, client):
+        self.__refresh.pack_forget()
+        self.__back_ask.pack_forget()
+        for player in self.players:
+            player.destroy()
+        self.__wating.config(text=f'wating for {client}...')
+        self.__wating.pack(pady=10)
+        self.socket.send(f'PY{client}'.encode())
+        threading.Thread(target=self.wait_for_info).start()
 
     def refresh(self):
         for player in self.players:
