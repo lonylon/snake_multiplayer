@@ -11,9 +11,9 @@ WHITE = (255, 255, 255)
 BOARD_COLOR = (0, 0, 0)
 BACKGROUND_COLOR = (90, 90, 90)
 BLACK = (0, 0, 0)
-SNAKE_COLOR = (48, 184, 61)
+GREEN = (48, 184, 61)
 APPLE_COLOR = (255, 0, 0)
-HEAD_COLOR = (0, 100, 0)
+GREEN_HEAD = (0, 100, 0)
 YELLOW = (245, 252, 33)
 YELLOW_HEAD = (110, 92, 3)
 
@@ -33,11 +33,11 @@ size = (SCREEN_SIZE + 150, SCREEN_SIZE)
 # global variables:
 AVAILABLE_SPOTS = []
 
-NUMBER_OF_APPLES = 20
+NUMBER_OF_APPLES = 100
 
 APPLE_EATEN = ''
 
-IS_HOST = True
+IS_HOST = False
 
 def draw_frame(snakes, SCREEN):
     for row in GRID:
@@ -64,6 +64,7 @@ def draw_square(x, y, color, SCREEN):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
 
 def update_grid(snakes, my_socket):
+    global IS_HOST
     # part 1(the apple): 
     for snake in snakes:
         if GRID[snake.row][snake.col].count == -1:
@@ -139,7 +140,8 @@ def enter_snake(snakes):
 
 def main():
     global APPLE_EATEN
-    DEAD_SNAKES = [] 
+    global IS_HOST
+    DEAD_SNAKES = []
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
     print('connected')
@@ -147,24 +149,36 @@ def main():
     tkinter_handler.start_program()
     SCREEN = pygame.display.set_mode(size)
     pygame.init()
-    snake1 = Snake(7, 7, SNAKE_COLOR, HEAD_COLOR, 1)
-    snakes = []
-    total_snakes = []
-    my_socket.send(f'SK{snake1.row},{snake1.col},{snake1.color},{snake1.head_color},{snake1.id}'.encode())
-    snakes_info = my_socket.recv(1024).decode().split(':')
-    for snake_info in snakes_info:
-        snake_numbers = re.findall(r'\d+', snake_info)
-        snake_numbers = list(map(int, snake_numbers))
-        new_snake = Snake(
-            snake_numbers[0], 
-            snake_numbers[1], 
-            (snake_numbers[2], snake_numbers[3], snake_numbers[4]),
-            (snake_numbers[5], snake_numbers[6], snake_numbers[7]),
-            snake_numbers[8])
-        snakes.append(new_snake)
-        total_snakes.append(new_snake)
-
+    IS_HOST = tkinter_handler.type_player == 1
+    my_row = 7 if tkinter_handler.type_player == 1 else 20
+    my_color = GREEN if tkinter_handler.type_player == 1 else YELLOW
+    my_head_color = GREEN_HEAD if tkinter_handler.type_player == 1 else YELLOW_HEAD
     while True:
+        for row in GRID:
+            for col in row:
+                col.count = 0
+                col.color = BACKGROUND_COLOR
+                col.id = 0
+        snake1 = Snake(7, my_row, my_color, my_head_color, tkinter_handler.type_player)
+        snakes = []
+        total_snakes = []
+        my_socket.send(f'SK{snake1.row},{snake1.col},{snake1.color},{snake1.head_color},{snake1.id}'.encode())
+        snakes_info = my_socket.recv(1024).decode().split(':')
+        print(snakes_info)
+        for snake_info in snakes_info:
+            snake_numbers = re.findall(r'\d+', snake_info)
+            snake_numbers = list(map(int, snake_numbers))
+            new_snake = Snake(
+                snake_numbers[0], 
+                snake_numbers[1], 
+                (snake_numbers[2], snake_numbers[3], snake_numbers[4]),
+                (snake_numbers[5], snake_numbers[6], snake_numbers[7]),
+                snake_numbers[8])
+            snakes.append(new_snake)
+            total_snakes.append(new_snake)
+
+    # while True:
+        print(1)
         # draw the board
         SCREEN.fill(BLACK)
         # add snake to grid
@@ -249,7 +263,8 @@ def main():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     my_socket.send(f'goodbye'.encode())
-            if len(snakes) == 0:
+            if len(snakes) < 2:
+                print(4)
                 quit_game = True
 
 

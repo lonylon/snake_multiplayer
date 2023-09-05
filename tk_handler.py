@@ -7,6 +7,7 @@ import time
 
 class Tk_Handler:
     def __init__(self, socket):
+        self.type_player = 0
         self.socket = socket
         self.keep_waiting = True
         self.thread_event = Event()
@@ -166,7 +167,7 @@ class Tk_Handler:
 
         self.__wating = tk.Label(self.__ask, text='', bg='green', font=self.__BUTTON_FONT)
         self.__wating.pack_forget()
-        
+
         # # join widgets------------------------------------------
         self.__join = tk.Frame(self.root, bg='gray')
 
@@ -266,7 +267,7 @@ class Tk_Handler:
     
     def request(self, client):
         self.socket.send(f'RQ{client}'.encode())
-        self.socket.recv(1024)
+        self.type_player = int(self.socket.recv(1024).decode()[-1])
         self.start_game()
 
     def refresh_join(self):
@@ -283,7 +284,7 @@ class Tk_Handler:
             self.requests.append(new_request)
 
     def wait_for_info(self):
-        self.socket.recv(1024)
+        self.type_player = int(self.socket.recv(1024).decode()[-1])
         self.start_game()
 
     def play(self, client):
