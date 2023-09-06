@@ -6,7 +6,7 @@ import socket
 import time
 
 class Tk_Handler:
-    def __init__(self, socket):
+    def __init__(self, socket, need_to_login):
         self.type_player = 0
         self.socket = socket
         self.keep_waiting = True
@@ -185,7 +185,10 @@ class Tk_Handler:
         # -----------------------------------------------------------------
 
         # Show the original page by default
-        self.__show_page(self.__beginning_page)
+        if need_to_login:
+            self.__show_page(self.__beginning_page)
+        else:
+            self.__show_page(self.__select)
 
     # Functions
     def __show_page(self, page):
@@ -237,6 +240,7 @@ class Tk_Handler:
         self.__show_page(self.__beginning_page)
 
     def select(self):
+        print('wowowowowowow')
         self.__hide_page(self.__beginning_page)
         self.__hide_page(self.__register_page)
         self.__hide_page(self.__login_page)
@@ -279,7 +283,7 @@ class Tk_Handler:
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT, command=lambda: self.request(client))
+            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT, command=lambda client=client: self.request(client))
             new_request.pack(pady=10)
             self.requests.append(new_request)
 
@@ -288,14 +292,16 @@ class Tk_Handler:
         self.start_game()
 
     def play(self, client):
+        print(client)
         self.__refresh.pack_forget()
         self.__back_ask.pack_forget()
         for player in self.players:
             player.destroy()
-        self.__wating.config(text=f'wating for {client}...')
+        self.__wating.config(text=f'waiting for {client}...')
         self.__wating.pack(pady=10)
         self.socket.send(f'PY{client}'.encode())
-        threading.Thread(target=self.wait_for_info).start()
+        # threading.Thread(target=self.wait_for_info).start()
+        self.wait_for_info()
 
     def refresh(self):
         for player in self.players:
@@ -306,7 +312,7 @@ class Tk_Handler:
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_player = tk.Button(self.__ask, text=client, bg='lightblue', font=self.__BUTTON_FONT, command=lambda: self.play(client))
+            new_player = tk.Button(self.__ask, text=client, bg='lightblue', font=self.__BUTTON_FONT, command=lambda client=client: self.play(client))
             new_player.pack(pady=10)
             self.players.append(new_player)
 

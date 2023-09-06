@@ -51,6 +51,7 @@ def draw_frame(snakes, SCREEN):
     score_font = pygame.font.Font(None, SCORE_FONT_SIZE)
     score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
     for i in range(len(snakes)):
+        name = 'green' if snakes[i].id == 1 else 'yellow' 
         score_text = score_font.render(f"{snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
         score_text_rect = score_text.get_rect(
             left=score_x_offset,
@@ -141,131 +142,145 @@ def enter_snake(snakes):
 def main():
     global APPLE_EATEN
     global IS_HOST
-    DEAD_SNAKES = []
+    DEAD_SNAKES = [] 
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
     print('connected')
-    tkinter_handler = Tk_Handler(my_socket)
-    tkinter_handler.start_program()
-    SCREEN = pygame.display.set_mode(size)
-    pygame.init()
-    IS_HOST = tkinter_handler.type_player == 1
-    my_row = 7 if tkinter_handler.type_player == 1 else 20
-    my_color = GREEN if tkinter_handler.type_player == 1 else YELLOW
-    my_head_color = GREEN_HEAD if tkinter_handler.type_player == 1 else YELLOW_HEAD
+    need_to_login = True
     while True:
-        for row in GRID:
-            for col in row:
-                col.count = 0
-                col.color = BACKGROUND_COLOR
-                col.id = 0
-        snake1 = Snake(7, my_row, my_color, my_head_color, tkinter_handler.type_player)
-        snakes = []
-        total_snakes = []
-        my_socket.send(f'SK{snake1.row},{snake1.col},{snake1.color},{snake1.head_color},{snake1.id}'.encode())
-        snakes_info = my_socket.recv(1024).decode().split(':')
-        print(snakes_info)
-        for snake_info in snakes_info:
-            snake_numbers = re.findall(r'\d+', snake_info)
-            snake_numbers = list(map(int, snake_numbers))
-            new_snake = Snake(
-                snake_numbers[0], 
-                snake_numbers[1], 
-                (snake_numbers[2], snake_numbers[3], snake_numbers[4]),
-                (snake_numbers[5], snake_numbers[6], snake_numbers[7]),
-                snake_numbers[8])
-            snakes.append(new_snake)
-            total_snakes.append(new_snake)
+        tkinter_handler = Tk_Handler(my_socket, need_to_login)
+        tkinter_handler.start_program()
+        need_to_login = False
+        # if need_to_login:
+        #     tkinter_handler.start_program()
+        #     need_to_login = False
+        # else:
+        #     print(1)
+        #     tkinter_handler.root.mainloop()
+        #     tkinter_handler.select()
+        print(2)
+        SCREEN = pygame.display.set_mode(size)
+        pygame.init()
+        IS_HOST = tkinter_handler.type_player == 1
+        my_row = 7 if tkinter_handler.type_player == 1 else 20
+        my_color = GREEN if tkinter_handler.type_player == 1 else YELLOW
+        my_head_color = GREEN_HEAD if tkinter_handler.type_player == 1 else YELLOW_HEAD
+        in_game = True
+        while in_game:
+            for row in GRID:
+                for col in row:
+                    col.count = 0
+                    col.color = BACKGROUND_COLOR
+                    col.id = 0
+            snake1 = Snake(7, my_row, my_color, my_head_color, tkinter_handler.type_player)
+            snakes = []
+            total_snakes = []
+            my_socket.send(f'SK{snake1.row},{snake1.col},{snake1.color},{snake1.head_color},{snake1.id}'.encode())
+            snakes_info = my_socket.recv(1024).decode().split(':')
+            print(snakes_info)
+            for snake_info in snakes_info:
+                snake_numbers = re.findall(r'\d+', snake_info)
+                snake_numbers = list(map(int, snake_numbers))
+                new_snake = Snake(
+                    snake_numbers[0], 
+                    snake_numbers[1], 
+                    (snake_numbers[2], snake_numbers[3], snake_numbers[4]),
+                    (snake_numbers[5], snake_numbers[6], snake_numbers[7]),
+                    snake_numbers[8])
+                snakes.append(new_snake)
+                total_snakes.append(new_snake)
 
-    # while True:
-        print(1)
-        # draw the board
-        SCREEN.fill(BLACK)
-        # add snake to grid
-        enter_snake(snakes)
-        # add available spots for the apple to the according list
-        AVAILABLE_SPOTS.clear()
-        for row in GRID:
-            for column in row:
-                if column.count == 0:
-                    AVAILABLE_SPOTS.append(column)
-        # add apples:
-        if IS_HOST:
-            apples = ''
-            for i in range(0, NUMBER_OF_APPLES):
-                apple_position = add_apple_host()
-                apples += f':({apple_position[0]},{apple_position[1]})'  # add apple to the grid
-            my_socket.send(('AA' + apples).encode())
+        # while True:
+            # draw the board
+            SCREEN.fill(BLACK)
+            # add snake to grid
+            enter_snake(snakes)
+            # add available spots for the apple to the according list
+            AVAILABLE_SPOTS.clear()
+            for row in GRID:
+                for column in row:
+                    if column.count == 0:
+                        AVAILABLE_SPOTS.append(column)
+            # add apples:
+            if IS_HOST:
+                apples = ''
+                for i in range(0, NUMBER_OF_APPLES):
+                    apple_position = add_apple_host()
+                    apples += f':({apple_position[0]},{apple_position[1]})'  # add apple to the grid
+                my_socket.send(('AA' + apples).encode())
+                my_socket.recv(1024)
+            else:
+                apples = my_socket.recv(1024).decode().split(':')
+                if apples[0] == 'AA':
+                    for i in range(1, len(apples)):
+                        apple_numbers = re.findall(r'\d+', apples[i])
+                        apple_numbers = list(map(int, apple_numbers)) 
+                        add_apple(apple_numbers[0], apple_numbers[1])
+            draw_frame(total_snakes, SCREEN)  # draw the beginning frame
+            # wait for the space_bar to be pressed
+            if IS_HOST:
+                start_game = False
+                while not start_game:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_SPACE:
+                                start_game = True
+                                my_socket.send('BG'.encode()) 
+                        if event.type == pygame.QUIT:
+                                pygame.quit()
             my_socket.recv(1024)
-        else:
-            apples = my_socket.recv(1024).decode().split(':')
-            if apples[0] == 'AA':
-                for i in range(1, len(apples)):
-                    apple_numbers = re.findall(r'\d+', apples[i])
-                    apple_numbers = list(map(int, apple_numbers)) 
-                    add_apple(apple_numbers[0], apple_numbers[1])
-        draw_frame(total_snakes, SCREEN)  # draw the beginning frame
-        # wait for the space_bar to be pressed
-        if IS_HOST:
-            start_game = False
-            while not start_game:
+            quit_game = False
+            while not quit_game:
+                draw_frame(total_snakes, SCREEN)
+                snake1.update_position()
+                my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
+                head_infos = my_socket.recv(1024).decode().split(':')
+                # id=1(2,5)
+                for head_info in head_infos:
+                    numbers = re.findall(r'\d+', head_info)
+                    numbers = list(map(int, numbers))
+                    if not IS_HOST and head_info[:2] == 'AA':
+                        add_apple(numbers[0], numbers[1])
+                    else:
+                        for snake in snakes:
+                            if snake.id == numbers[0]:
+                                snake.set_position(numbers[1], numbers[2])
+                for snake in snakes:
+                    if not 0 <= snake.row < GRID_SIZE or not 0 <= snake.col < GRID_SIZE or GRID[snake.row][snake.col].count > 1:
+                        DEAD_SNAKES.append(snake)
+                    for check_snake in snakes:
+                        if snake is check_snake:
+                            continue
+                        if snake.row == check_snake.row and snake.col == check_snake.col:
+                            DEAD_SNAKES.append(snake)
+                            DEAD_SNAKES.append(check_snake)
+                DEAD_SNAKES = list(set(DEAD_SNAKES)) 
+                for snake in DEAD_SNAKES:
+                    death(snake)
+                    snakes.remove(snake)
+                DEAD_SNAKES.clear()
+                update_grid(snakes, my_socket)
+                draw_frame(total_snakes, SCREEN)
+                pygame.time.delay(120)            
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_SPACE:
-                            start_game = True
-                            my_socket.send('BG'.encode()) 
+                        if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
+                            snake1.direction = 'left'
+                        if event.key == pygame.K_RIGHT and snake1.true_direction != 'left':
+                            snake1.direction = 'right'
+                        if event.key == pygame.K_UP and snake1.true_direction != 'down':
+                            snake1.direction = 'up'
+                        if event.key == pygame.K_DOWN and snake1.true_direction != 'up':
+                            snake1.direction = 'down'
                     if event.type == pygame.QUIT:
-                            pygame.quit()
-        my_socket.recv(1024)
-        quit_game = False
-        while not quit_game:
-            draw_frame(total_snakes, SCREEN)
-            snake1.update_position()
-            my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
-            head_infos = my_socket.recv(1024).decode().split(':')
-            # id=1(2,5)
-            for head_info in head_infos:
-                numbers = re.findall(r'\d+', head_info)
-                numbers = list(map(int, numbers))
-                if not IS_HOST and head_info[:2] == 'AA':
-                    add_apple(numbers[0], numbers[1])
-                else:
-                    for snake in snakes:
-                        if snake.id == numbers[0]:
-                            snake.set_position(numbers[1], numbers[2])
-            for snake in snakes:
-                if not 0 <= snake.row < GRID_SIZE or not 0 <= snake.col < GRID_SIZE or GRID[snake.row][snake.col].count > 1:
-                    DEAD_SNAKES.append(snake)
-                for check_snake in snakes:
-                    if snake is check_snake:
-                        continue
-                    if snake.row == check_snake.row and snake.col == check_snake.col:
-                        DEAD_SNAKES.append(snake)
-                        DEAD_SNAKES.append(check_snake)
-            DEAD_SNAKES = list(set(DEAD_SNAKES)) 
-            for snake in DEAD_SNAKES:
-                death(snake)
-                snakes.remove(snake)
-            DEAD_SNAKES.clear()
-            update_grid(snakes, my_socket)
-            draw_frame(total_snakes, SCREEN)
-            pygame.time.delay(120)            
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
-                        snake1.direction = 'left'
-                    if event.key == pygame.K_RIGHT and snake1.true_direction != 'left':
-                        snake1.direction = 'right'
-                    if event.key == pygame.K_UP and snake1.true_direction != 'down':
-                        snake1.direction = 'up'
-                    if event.key == pygame.K_DOWN and snake1.true_direction != 'up':
-                        snake1.direction = 'down'
-                if event.type == pygame.QUIT:
+                        pygame.quit()
+                        my_socket.send(f'goodbye'.encode())
+                if len(snakes) < 2:
+                    print(4)
+                    quit_game = True
                     pygame.quit()
-                    my_socket.send(f'goodbye'.encode())
-            if len(snakes) < 2:
-                print(4)
-                quit_game = True
+                    in_game = False
+                    my_socket.send('EG'.encode())
 
 
 if __name__ == '__main__':
