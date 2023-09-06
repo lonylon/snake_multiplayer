@@ -165,9 +165,6 @@ class Tk_Handler:
         self.__back_ask = tk.Button(self.__ask, text='back', bg='lightblue', font=self.__BUTTON_FONT, command=self.select)
         self.__back_ask.pack(pady=10)
 
-        self.__wating = tk.Label(self.__ask, text='', bg='green', font=self.__BUTTON_FONT)
-        self.__wating.pack_forget()
-
         # # join widgets------------------------------------------
         self.__join = tk.Frame(self.root, bg='gray')
 
@@ -274,33 +271,45 @@ class Tk_Handler:
         self.type_player = int(self.socket.recv(1024).decode()[-1])
         self.start_game()
 
+    def reject(self, client):
+        self.socket.send(f'RD{client}'.encode())  # Send a rejection message to the server
+        self.refresh_join()  # Refresh the list of join requests
+
     def refresh_join(self):
         for request in self.requests:
             request.destroy()
         self.requests.clear()
         self.socket.send('RJ'.encode())
         clients = self.socket.recv(1024).decode().split(':')
+        print(clients)
         if clients[0] == 'NC':
             return
         for client in clients:
-            new_request = tk.Button(self.__join, text=f"join {client}?", bg='lightblue', font=self.__BUTTON_FONT, command=lambda client=client: self.request(client))
-            new_request.pack(pady=10)
-            self.requests.append(new_request)
+            new_request_frame = tk.Frame(self.__join, bg='gray')  # Create a frame to contain the buttons
+            new_request_frame.pack()
+            self.requests.append(new_request_frame)
+
+            accept_button = tk.Button(new_request_frame, text=f'Accept {client}?', bg='lightblue', font=self.__BUTTON_FONT, command=lambda client=client: self.request(client))
+            accept_button.pack(side=tk.LEFT)
+            self.requests.append(accept_button)
+
+            no_button = tk.Button(new_request_frame, text=f'reject', bg='red', font=self.__BUTTON_FONT, command=lambda client=client: self.reject(client))
+            no_button.pack(side=tk.LEFT)
+            self.requests.append(no_button)
 
     def wait_for_info(self):
-        self.type_player = int(self.socket.recv(1024).decode()[-1])
-        self.start_game()
+        data = self.socket.recv(1024).decode()
+        if data[:2] == 'SG':
+            self.type_player = int(data[-1])
+            self.start_game()
+        else:
+            self.refresh()
+            return
 
     def play(self, client):
-        print(client)
-        self.__refresh.pack_forget()
-        self.__back_ask.pack_forget()
         for player in self.players:
             player.destroy()
-        self.__wating.config(text=f'waiting for {client}...')
-        self.__wating.pack(pady=10)
         self.socket.send(f'PY{client}'.encode())
-        # threading.Thread(target=self.wait_for_info).start()
         self.wait_for_info()
 
     def refresh(self):
@@ -383,6 +392,10 @@ class Tk_Handler:
         self.root.destroy()
         self.game_started = True
     
+    def exited(self):
+        self.socket.send('goodbye'.encode())
+        sys.exit()
+
     def start_program(self):
-        self.root.protocol("WM_DELETE_WINDOW", sys.exit)
+        self.root.protocol("WM_DELETE_WINDOW", self.exited)
         self.root.mainloop()
