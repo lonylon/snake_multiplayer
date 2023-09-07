@@ -52,7 +52,7 @@ def draw_frame(snakes, SCREEN):
     score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
     for i in range(len(snakes)):
         name = 'green' if snakes[i].id == 1 else 'yellow' 
-        score_text = score_font.render(f"{name}: {snakes[i].head-4}", True, snakes[i].color)
+        score_text = score_font.render(f"{snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
         score_text_rect = score_text.get_rect(
             left=score_x_offset,
             top=i * (SCORE_FONT_SIZE + 5)
@@ -65,7 +65,6 @@ def draw_square(x, y, color, SCREEN):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
 
 def update_grid(snakes, my_socket):
-    global GRID
     global IS_HOST
     # part 1(the apple): 
     for snake in snakes:
@@ -133,7 +132,6 @@ def death(snake):
                 column.count = 0
 
 def enter_snake(snakes):
-    global GRID
     for snake in snakes:
         for i in range(4, 8):
             GRID[i][snake.col].count = i - 3
@@ -144,8 +142,7 @@ def enter_snake(snakes):
 def main():
     global APPLE_EATEN
     global IS_HOST
-    global GRID
-    DEAD_SNAKES = []
+    DEAD_SNAKES = [] 
     my_socket = socket.socket()
     my_socket.connect(('10.0.0.14', 8820))
     print('connected')
