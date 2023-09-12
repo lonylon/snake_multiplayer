@@ -2,6 +2,7 @@ import pygame
 import random
 import socket
 import re
+import sys
 from tk_handler import Tk_Handler
 from snake import Snake
 from grid_square import GridSquare
@@ -55,7 +56,7 @@ def draw_frame(snakes, SCREEN):
     score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
     for i in range(len(snakes)):
         name = 'green' if snakes[i].id == 1 else 'yellow' 
-        score_text = score_font.render(f"{name}: {snakes[i].head-4}", True, snakes[i].color)
+        score_text = score_font.render(f"{name}: {snakes[i].head - 4}", True, snakes[i].color)
         score_text_rect = score_text.get_rect(
             left=score_x_offset,
             top=i * (SCORE_FONT_SIZE + 5)
@@ -145,13 +146,6 @@ def main():
         tkinter_handler = Tk_Handler(my_socket, need_to_login)
         tkinter_handler.start_program()
         need_to_login = False
-        # if need_to_login:
-        #     tkinter_handler.start_program()
-        #     need_to_login = False
-        # else:
-        #     print(1)
-        #     tkinter_handler.root.mainloop()
-        #     tkinter_handler.select()
         print(2)
         SCREEN = pygame.display.set_mode(size)
         pygame.init()
@@ -229,6 +223,7 @@ def main():
                 snake1.update_position()
                 my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
                 head_infos = my_socket.recv(1024).decode().split(':')
+                print(head_infos)
                 # id=1(2,5)
                 for head_info in head_infos:
                     numbers = re.findall(r'\d+', head_info)
@@ -255,7 +250,7 @@ def main():
                 DEAD_SNAKES.clear()
                 update_grid(snakes, my_socket)
                 draw_frame(total_snakes, SCREEN)
-                pygame.time.delay(10)            
+                pygame.time.delay(100)            
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
@@ -266,11 +261,7 @@ def main():
                             snake1.direction = 'up'
                         if event.key == pygame.K_DOWN and snake1.true_direction != 'up':
                             snake1.direction = 'down'
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        my_socket.send(f'goodbye'.encode())
                 if len(snakes) < 2:
-                    print(4)
                     quit_game = True
                     pygame.quit()
                     in_game = False
