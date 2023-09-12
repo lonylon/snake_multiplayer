@@ -65,37 +65,28 @@ def draw_square(x, y, color, SCREEN):
     pygame.draw.rect(SCREEN, color, pygame.Rect(x*(SQUARE_SIZE + PADDING) + PADDING, y*(SQUARE_SIZE + PADDING) + PADDING, SQUARE_SIZE, SQUARE_SIZE))
 
 def update_grid(snakes, my_socket):
-    print(1)
     global IS_HOST
     # part 1(the apple): 
-    eaten = False
-    new_positions = ''
     for snake in snakes:
-        print(2)
         if GRID[snake.row][snake.col].count == -1:
-            if IS_HOST:
-                new_position = add_apple_host()
-                new_positions += f'AA({new_position[0]},{new_position[1]}):'
+            # if IS_HOST:
+            #     apple_position = add_apple_host()
+            #     my_socket.send(f'AA({apple_position[0]},{apple_position[1]})'.encode())
+            #     my_socket.recv(1024)
+            # else:
+            #     apple_position = my_socket.recv(1024).decode()
+            #     apple_numbers = re.findall(r'\d+', apple_position)
+            #     apple_numbers = list(map(int, apple_numbers)) 
+            #     add_apple(apple_numbers[0], apple_numbers[1])
+            """write a function that gets counts how many apples there are needed to be added, then add
+            the apples to the grid like writted above but so that it wont cause problems"""
             snake.apple_eaten = True
-            eaten = True
         GRID[snake.row][snake.col].count = snake.head + 1
         GRID[snake.row][snake.col].id = snake.id
         if GRID[snake.row][snake.col] in AVAILABLE_SPOTS:
             AVAILABLE_SPOTS.remove(GRID[snake.row][snake.col])
         if snake.apple_eaten:
             snake.head += 1
-    if eaten and IS_HOST:
-        my_socket.send(new_positions.encode())
-        print(my_socket.recv(1024))
-    if not IS_HOST and eaten:
-        my_socket.send('NA'.encode())
-        apple_positions = my_socket.recv(1024).decode().split(':')
-        print('apples', apple_positions)
-        apple_positions.pop(len(apple_positions)-1)
-        for apple_position in apple_positions:
-            apple_numbers = re.findall(r'\d+', apple_position)
-            apple_numbers = list(map(int, apple_numbers))
-            add_apple(apple_numbers[0], apple_numbers[1])
     # part 2(the grid)
     for row in GRID:
         for column in row:
@@ -124,8 +115,7 @@ def add_apple_host():
         new_apple_spot.count = -1
         new_apple_spot.color = APPLE_COLOR
         AVAILABLE_SPOTS.remove(new_apple_spot)
-        return new_apple_spot.x, new_apple_spot.y
-    return
+    return new_apple_spot.x, new_apple_spot.y
 
 def add_apple(x, y):
     new_apple_spot = None
@@ -156,7 +146,7 @@ def main():
     global IS_HOST
     DEAD_SNAKES = [] 
     my_socket = socket.socket()
-    my_socket.connect(('10.0.0.14', 8820))
+    my_socket.connect((IP, PORT))
     print('connected')
     need_to_login = True
     while True:
@@ -170,6 +160,7 @@ def main():
         #     print(1)
         #     tkinter_handler.root.mainloop()
         #     tkinter_handler.select()
+        print(2)
         SCREEN = pygame.display.set_mode(size)
         pygame.init()
         IS_HOST = tkinter_handler.type_player == 1
@@ -200,7 +191,6 @@ def main():
                     snake_numbers[8])
                 snakes.append(new_snake)
                 total_snakes.append(new_snake)
-            print([snakes[0].id, snakes[1].id])
 
         # while True:
             # draw the board
@@ -222,7 +212,6 @@ def main():
                 my_socket.send(('AA' + apples).encode())
                 my_socket.recv(1024)
             else:
-                my_socket.send('NA'.encode())
                 apples = my_socket.recv(1024).decode().split(':')
                 if apples[0] == 'AA':
                     for i in range(1, len(apples)):
@@ -246,13 +235,10 @@ def main():
             for i in range(1000):
                 add_apple_host()
             while not quit_game:
-                print(1)
                 draw_frame(total_snakes, SCREEN)
                 snake1.update_position()
-                my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode())
+                my_socket.send(f'id={snake1.id}({snake1.row},{snake1.col})'.encode()) 
                 head_infos = my_socket.recv(1024).decode().split(':')
-                print('head', head_infos)
-                print(2)
                 # id=1(2,5)
                 for head_info in head_infos:
                     numbers = re.findall(r'\d+', head_info)
@@ -263,7 +249,6 @@ def main():
                         for snake in snakes:
                             if snake.id == numbers[0]:
                                 snake.set_position(numbers[1], numbers[2])
-                print(3)
                 for snake in snakes:
                     if not 0 <= snake.row < GRID_SIZE or not 0 <= snake.col < GRID_SIZE or GRID[snake.row][snake.col].count > 1:
                         DEAD_SNAKES.append(snake)
@@ -273,7 +258,6 @@ def main():
                         if snake.row == check_snake.row and snake.col == check_snake.col:
                             DEAD_SNAKES.append(snake)
                             DEAD_SNAKES.append(check_snake)
-                print(4)
                 DEAD_SNAKES = list(set(DEAD_SNAKES)) 
                 for snake in DEAD_SNAKES:
                     death(snake)
@@ -281,8 +265,7 @@ def main():
                 DEAD_SNAKES.clear()
                 update_grid(snakes, my_socket)
                 draw_frame(total_snakes, SCREEN)
-                pygame.time.delay(120)
-                print(5)
+                pygame.time.delay(120)            
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
@@ -297,6 +280,7 @@ def main():
                         pygame.quit()
                         my_socket.send(f'goodbye'.encode())
                 if len(snakes) < 2:
+                    print(4)
                     quit_game = True
                     pygame.quit()
                     in_game = False
