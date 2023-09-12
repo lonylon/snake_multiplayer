@@ -6,6 +6,9 @@ from tk_handler import Tk_Handler
 from snake import Snake
 from grid_square import GridSquare
 
+# connection:
+IP = '127.0.0.1'
+PORT = 9999
 # colors:
 WHITE = (255, 255, 255)
 BOARD_COLOR = (0, 0, 0)
@@ -52,7 +55,7 @@ def draw_frame(snakes, SCREEN):
     score_x_offset = GRID_SIZE * (SQUARE_SIZE + PADDING) + PADDING + 10
     for i in range(len(snakes)):
         name = 'green' if snakes[i].id == 1 else 'yellow' 
-        score_text = score_font.render(f"{snakes[i].id}: {snakes[i].head-4}", True, snakes[i].color)
+        score_text = score_font.render(f"{name}: {snakes[i].head-4}", True, snakes[i].color)
         score_text_rect = score_text.get_rect(
             left=score_x_offset,
             top=i * (SCORE_FONT_SIZE + 5)
@@ -69,17 +72,6 @@ def update_grid(snakes, my_socket):
     # part 1(the apple): 
     for snake in snakes:
         if GRID[snake.row][snake.col].count == -1:
-            # if IS_HOST:
-            #     apple_position = add_apple_host()
-            #     my_socket.send(f'AA({apple_position[0]},{apple_position[1]})'.encode())
-            #     my_socket.recv(1024)
-            # else:
-            #     apple_position = my_socket.recv(1024).decode()
-            #     apple_numbers = re.findall(r'\d+', apple_position)
-            #     apple_numbers = list(map(int, apple_numbers)) 
-            #     add_apple(apple_numbers[0], apple_numbers[1])
-            """write a function that gets counts how many apples there are needed to be added, then add
-            the apples to the grid like writted above but so that it wont cause problems"""
             snake.apple_eaten = True
         GRID[snake.row][snake.col].count = snake.head + 1
         GRID[snake.row][snake.col].id = snake.id
@@ -191,7 +183,6 @@ def main():
                     snake_numbers[8])
                 snakes.append(new_snake)
                 total_snakes.append(new_snake)
-
         # while True:
             # draw the board
             SCREEN.fill(BLACK)
@@ -204,6 +195,7 @@ def main():
                     if column.count == 0:
                         AVAILABLE_SPOTS.append(column)
             # add apples:
+            pygame.time.delay(2000)
             if IS_HOST:
                 apples = ''
                 for i in range(0, NUMBER_OF_APPLES):
@@ -232,8 +224,6 @@ def main():
                                 pygame.quit()
             my_socket.recv(1024)
             quit_game = False
-            for i in range(1000):
-                add_apple_host()
             while not quit_game:
                 draw_frame(total_snakes, SCREEN)
                 snake1.update_position()
@@ -265,7 +255,7 @@ def main():
                 DEAD_SNAKES.clear()
                 update_grid(snakes, my_socket)
                 draw_frame(total_snakes, SCREEN)
-                pygame.time.delay(120)            
+                pygame.time.delay(10)            
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_LEFT and snake1.true_direction != 'right':
